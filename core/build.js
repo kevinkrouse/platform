@@ -9,7 +9,7 @@ const fs = require('fs-extra');
  * Experimental build configuration to use @labkey/api distribution in lieu of default client/api/core files.
  * For more information see https://github.com/LabKey/labkey-api-js#running-against-a-labkey-server
  */
-const USE_LABKEY_API = false;
+const USE_LABKEY_API = true;
 
 function copyAPIFiles() {
     log('Copying files from npm package ... ');
