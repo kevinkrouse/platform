@@ -14,7 +14,7 @@ const USE_LABKEY_API = true;
 function copyAPIFiles() {
     log('Copying files from npm package ... ');
     const apiDistDir = __dirname + '/node_modules/@labkey/api/dist/';
-    const targetDir = __dirname + '/resources/web/clientapi/';
+    const targetDir = __dirname + '/../api/resources/web/clientapi/';
 
     const files = [
         'labkey-api-js-core.min.js',
