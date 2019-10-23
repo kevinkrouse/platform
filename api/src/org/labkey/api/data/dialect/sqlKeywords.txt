@@ -122,6 +122,8 @@ clob
 close
 cluster
 clustered
+cmax
+cmin
 coalesce
 cobol
 code
@@ -188,6 +190,7 @@ createrole
 createuser
 cross
 csv
+ctid
 cube
 cume_dist
 current
@@ -681,6 +684,7 @@ off
 offline
 offset
 offsets
+oid
 oids
 old
 old_password
@@ -1046,6 +1050,7 @@ t
 table
 table_checksum
 table_name
+tableoid
 tables
 tablesample
 tablespace
@@ -1189,6 +1194,8 @@ writetext
 x509
 xa
 xid
+xmax
+xmin
 xml
 xmlagg
 xmlattributes

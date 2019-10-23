@@ -15,6 +15,19 @@
  */
 package org.labkey.core.dialect;
 
+import org.jetbrains.annotations.NotNull;
+
+import java.util.Set;
+
 public class PostgreSql_12_Dialect extends PostgreSql_11_Dialect
 {
+    @NotNull
+    @Override
+    protected Set<String> getReservedWords()
+    {
+        Set<String> words = super.getReservedWords();
+        words.remove("oid");
+
+        return words;
+    }
 }
