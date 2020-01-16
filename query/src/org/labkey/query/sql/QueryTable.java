@@ -278,6 +278,7 @@ public class QueryTable extends QueryRelation
     }
 
 
+    @Override
     public SQLFragment getSql()
     {
         SQLFragment ret = new SQLFragment();
@@ -310,13 +311,13 @@ public class QueryTable extends QueryRelation
         else
             _innerAlias = makeRelationName(_tableInfo.getName());
 
-        for (ColumnInfo c : _tableInfo.getColumns())
+        if (_selectAllColumns)
         {
-            if (c.isKeyField() || _selectAllColumns)
+            for (ColumnInfo c : _tableInfo.getColumns())
             {
-                RelationColumn keyField = getColumn(c.getName());
-                if (null != keyField)
-                    keyField.addRef(this);
+                RelationColumn relationColumn = getColumn(c.getName());
+                if (null != relationColumn)
+                    relationColumn.addRef(this);
             }
         }
 
