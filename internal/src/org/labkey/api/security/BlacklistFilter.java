@@ -92,7 +92,15 @@ public class BlacklistFilter
 
         boolean blacklisted = null != blacklist.get(key);
         Suspicious s = suspiciousMap.get(key);
-        return s != null && s.getCount() > 20;
+        if (!blacklisted && null == s)
+            return false;
+
+        // if detected previous suspicious requests, pre-screen new requests (don't wait for BAD_REQUEST or NOT_FOUND)
+        if (isSuspicious(req.getRequestURI(),req.getQueryString(),req.getHeader("User-Agent")))
+        {
+            handleBadRequest(req);
+        }
+        return blacklisted;
     }
 
 
