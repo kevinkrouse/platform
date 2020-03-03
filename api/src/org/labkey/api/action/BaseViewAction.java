@@ -29,9 +29,11 @@ import org.labkey.api.data.Container;
 import org.labkey.api.data.ConvertHelper;
 import org.labkey.api.data.DataRegion;
 import org.labkey.api.data.ObjectFactory;
+import org.labkey.api.security.AuthenticatedRequest;
 import org.labkey.api.security.User;
 import org.labkey.api.util.HelpTopic;
 import org.labkey.api.util.PageFlowUtil;
+import org.labkey.api.view.HttpView;
 import org.labkey.api.view.template.PageConfig;
 import org.springframework.beans.AbstractPropertyAccessor;
 import org.springframework.beans.BeanUtils;
@@ -320,8 +322,24 @@ public abstract class BaseViewAction<FORM> extends PermissionCheckableAction imp
         }
     }
 
-
     public static @NotNull BindException springBindParameters(Object command, String commandName, PropertyValues params)
+    {
+        BindException bind = _springBindParameters(command, commandName, params);
+        for (ObjectError err : bind.getAllErrors())
+        {
+            if (err instanceof FieldError && ((FieldError)err).isBindingFailure())
+            {
+                // Binding errors may or may not cause a 404, but we might want to check for malicious URLs anyway, just mark the request
+                var req = HttpView.currentRequest();
+                if (req instanceof AuthenticatedRequest)
+                    ((AuthenticatedRequest)req).setHasParameterBindError();
+                break;
+            }
+        }
+        return bind;
+    }
+
+    public static @NotNull BindException _springBindParameters(Object command, String commandName, PropertyValues params)
     {
         ServletRequestDataBinder binder = new ServletRequestDataBinder(command, commandName);
         ConvertHelper.getPropertyEditorRegistrar().registerCustomEditors(binder);

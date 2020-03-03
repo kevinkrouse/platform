@@ -65,6 +65,7 @@ public class AuthenticatedRequest extends HttpServletRequestWrapper implements A
     private final User _user;
     private boolean _loggedIn;
     private HttpSession _session = null;
+    private boolean _hasParameterBindError = false;
 
     public static AuthenticatedRequest create(@NotNull HttpServletRequest request, @NotNull User user)
     {
@@ -83,6 +84,16 @@ public class AuthenticatedRequest extends HttpServletRequestWrapper implements A
     @Override
     public void close()
     {
+    }
+
+    public void setHasParameterBindError()
+    {
+        _hasParameterBindError = true;
+    }
+
+    public boolean hasParameterBindError()
+    {
+        return _hasParameterBindError;
     }
 
     // Filter out the internal parameters (e.g., X-LABKEY-CSRF), #30532

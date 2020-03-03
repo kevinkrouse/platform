@@ -238,8 +238,11 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
+import static org.apache.commons.lang3.StringUtils.trimToEmpty;
 import static org.labkey.api.settings.AdminConsole.SettingsLinkType.Configuration;
 import static org.labkey.api.settings.AdminConsole.SettingsLinkType.Diagnostics;
+import static org.labkey.api.util.DOM.*;
 import static org.labkey.api.view.FolderManagement.EVERY_CONTAINER;
 import static org.labkey.api.view.FolderManagement.FOLDERS_AND_PROJECTS;
 import static org.labkey.api.view.FolderManagement.FOLDERS_ONLY;
@@ -9378,43 +9381,72 @@ public class AdminController extends SpringActionController
     }
 
 
-    @RequiresPermission(TroubleShooterPermission.class)
-    public class SuspiciousAction extends SimpleViewAction<Object>
+    public static class IdForm
     {
+        private String _id = null;
+
+        public String getId()
+        {
+            return _id;
+        }
+
+        public void setId(String id)
+        {
+            _id = id;
+        }
+    }
+
+    @RequiresPermission(TroubleShooterPermission.class)
+    public class SuspiciousAction extends SimpleViewAction<IdForm>
+    {
+        String id = null;
+        BlacklistFilter.Suspicious found = null;
+
         @Override
-        public ModelAndView getView(Object o, BindException errors)
+        public ModelAndView getView(IdForm form, BindException errors)
         {
             Collection<BlacklistFilter.Suspicious> list = BlacklistFilter.reportSuspicious();
-            StringBuilder sb = new StringBuilder();
             if (list.isEmpty())
             {
-                sb.append("No suspicious activity.\n");
+                return new HtmlView(HtmlString.of("No suspicious activity."));
+            }
+            else if (isNotBlank(form.getId()))
+            {
+                id = trimToEmpty(form.getId());
+                for (BlacklistFilter.Suspicious s : list)
+                {
+                    if (id.equals(s.host + "|" + s.userAgent))
+                    {
+                        found = s;
+                        return new HtmlView(s.getReport());
+                    }
+                }
+                return new HtmlView(HtmlString.of("No suspicious activity."));
             }
             else
             {
-                sb.append("<table class='table'>");
-                sb.append("<thead><th>host (user)</th><th>user-agent</th><th>count</th></thead>\n");
-                for (BlacklistFilter.Suspicious s : list)
-                {
-                    sb.append("<tr><td>")
-                            .append(PageFlowUtil.filter(s.host));
-                    if (!isBlank(s.user))
-                            sb.append("&nbsp;(" + PageFlowUtil.filter(s.user) + ")");
-                     sb.append("</td><td>")
-                            .append(PageFlowUtil.filter(s.userAgent))
-                            .append("</td><td>")
-                            .append(PageFlowUtil.filter(s.count))
-                            .append("</td></tr>\n");
-                }
-                sb.append("</table>");
+                Container root = ContainerManager.getRoot();
+                return new HtmlView(
+                    TABLE(cl("table"),
+                        THEAD(TH("host (user)"),TH("user-agent"),TH("count")),
+                        list.stream().map(s ->
+                            TR(
+                                TD(A(at(Attribute.href,new ActionURL(SuspiciousAction.class, root).replaceParameter("id",s.host+"|"+s.userAgent)),
+                                    s.host, " ", isBlank(s.user)? null : s.user)),
+                                TD(s.userAgent),
+                                TD("" + s.count))
+                        ))
+                );
             }
-            return new HtmlView(sb.toString());
         }
 
         @Override
         public NavTree appendNavTrail(NavTree root)
         {
-            return appendAdminNavTrail(root, "Suspicious activity", SuspiciousAction.class);
+            appendAdminNavTrail(root, "Suspicious activity", SuspiciousAction.class);
+            if (null != id)
+                root.addChild(null==found ? id : found.host);
+            return root;
         }
     }
 

@@ -26,6 +26,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
+import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 import static javax.servlet.http.HttpServletResponse.SC_FORBIDDEN;
 import static javax.servlet.http.HttpServletResponse.SC_GONE;
 import static javax.servlet.http.HttpServletResponse.SC_NOT_FOUND;
@@ -51,7 +52,7 @@ public class SecurityPointcutServiceImpl implements SecurityPointcutService
         if (AppProps.getInstance().isExperimentalFeatureEnabled(AppProps.EXPERIMENTAL_BLOCKER))
         {
            if (BlacklistFilter.isOnBlacklist(req))
-               return sendError(res, SC_GONE,"Try again later.");
+               return sendError(res, SC_GONE, "Try again later.");
         }
         return true;
     }
@@ -60,13 +61,17 @@ public class SecurityPointcutServiceImpl implements SecurityPointcutService
     @Override
     public void afterProcessRequest(HttpServletRequest req, HttpServletResponse res)
     {
-        if (res.getStatus() == SC_NOT_FOUND)
-            BlacklistFilter.handleNotFound(req);
-        else if (res.getStatus() == SC_UNAUTHORIZED || res.getStatus() == SC_FORBIDDEN)
+        int status = res.getStatus();
+        boolean hasParameterError = req instanceof AuthenticatedRequest && ((AuthenticatedRequest)req).hasParameterBindError();
+        if (status == SC_UNAUTHORIZED || status == SC_FORBIDDEN)
         {
             Object ex = req.getAttribute(ExceptionUtil.REQUEST_EXCEPTION_ATTRIBUTE);
             if (ex instanceof CSRFException)
                 BlacklistFilter.handleBadRequest(req);
+        }
+        else if (status == SC_NOT_FOUND || status == SC_BAD_REQUEST || hasParameterError)
+        {
+            BlacklistFilter.handleNotFound(req);
         }
     }
 

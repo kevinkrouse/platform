@@ -21,7 +21,10 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.labkey.api.cache.Cache;
 import org.labkey.api.cache.CacheManager;
+import org.labkey.api.util.DateUtil;
 import org.labkey.api.util.FileUtil;
+import org.labkey.api.util.HeartBeat;
+import org.labkey.api.util.HtmlString;
 import org.labkey.api.util.PageFlowUtil;
 import org.labkey.api.util.Pair;
 import org.labkey.api.util.Path;
@@ -30,7 +33,10 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.Pattern;
+
+import static org.labkey.api.util.DOM.*;
 
 /**
  * This is not a defense against any particular vulnerability
@@ -41,7 +47,9 @@ import java.util.regex.Pattern;
 public class BlacklistFilter
 {
     static Logger _log = Logger.getLogger(BlacklistFilter.class);
-    static Cache<String,Suspicious> suspiciousMap = CacheManager.getStringKeyCache(1_000, CacheManager.HOUR, "suspicious cache");
+
+    static Cache<String,Suspicious> suspiciousMap = CacheManager.getStringKeyCache(1_000, CacheManager.HOUR, "suspicious");
+    static Cache<String,Suspicious> blacklist = CacheManager.getStringKeyCache(1_000, CacheManager.DAY, "blacklist");
 
 
     private static String getBrowserKey(HttpServletRequest req)
@@ -59,11 +67,13 @@ public class BlacklistFilter
         int count = s.add(req);
         String uri = req.getRequestURI();
         String q = req.getQueryString();
-        if (count == 1 || count == 20)
+        if (count == 1 || count == 10)
         {
             _log.log(count==1?Level.INFO:Level.WARN,
             count + " suspicious request(s) by this host: " + host + " " + userAgent + (null == s.user ? "" : "(" + s.user + ")") + "\n" + uri + (null==q ? "" : "?" + q));
         }
+        if (count > 10)
+            blacklist.put(key,s);
     }
 
 
@@ -79,6 +89,8 @@ public class BlacklistFilter
     static boolean isOnBlacklist(HttpServletRequest req)
     {
         String key = getBrowserKey(req);
+
+        boolean blacklisted = null != blacklist.get(key);
         Suspicious s = suspiciousMap.get(key);
         return s != null && s.getCount() > 20;
     }
@@ -99,7 +111,7 @@ public class BlacklistFilter
             Pattern.compile("['\"\\s]=['\"\\s]"),
             Pattern.compile("ctxsys\\.drithsx\\.sn"),
             Pattern.compile("\\s((dbo)|(master)|(sys))\\."),
-            Pattern.compile("((information_schema)|(waitfor)|(pg_sleep)|(;)|(cha?r\\())")
+            Pattern.compile("((information_schema)|(waitfor)|(pg_sleep)|(cha?r\\())")   // semicolon is too common to check for
     };
     private final static Pattern pipe_pattern = Pattern.compile("\\|\\s*(ls|id|echo|vol|curl|wget)");
 
@@ -213,9 +225,14 @@ public class BlacklistFilter
     public static Collection<Suspicious> reportSuspicious()
     {
         ArrayList<Suspicious> ret = new ArrayList<>();
-        for (String key : suspiciousMap.getKeys())
+        Set<String> keys = new TreeSet<>();
+        keys.addAll(suspiciousMap.getKeys());
+        keys.addAll(blacklist.getKeys());
+        for (String key : keys)
         {
-            Suspicious s = suspiciousMap.get(key);
+            Suspicious s = blacklist.get(key);
+            if (null == s)
+                s = suspiciousMap.get(key);
             if (null == s)
                 continue;
             Suspicious copy = s.clone();
@@ -229,8 +246,11 @@ public class BlacklistFilter
     {
         public final String host;
         public final String userAgent;
+        public String lastURL = null;
+        public long lastRequestTime = 0;
         public String user = null;
         public int count = 0;
+
         public Suspicious(String host, String userAgent)
         {
             this.host = host;
@@ -242,6 +262,8 @@ public class BlacklistFilter
             Suspicious c = new Suspicious(this.host,this.userAgent);
             c.user = this.user;
             c.count = this.count;
+            c.lastURL = this.lastURL;
+            c.lastRequestTime = this.lastRequestTime;
             return c;
         }
 
@@ -256,7 +278,24 @@ public class BlacklistFilter
             User u = (User)req.getUserPrincipal();
             if (u != null && !u.isGuest())
                  this.user = u.getEmail();
+            this.lastRequestTime = HeartBeat.currentTimeMillis();
+            this.lastURL = req.getRequestURI() + "?" + req.getQueryString();
             return count;
+        }
+
+        public HtmlString getReport()
+        {
+            boolean blacklisted = null != blacklist.get(host + "|" + userAgent);
+            StringBuilder sb = new StringBuilder();
+            TABLE(cl("table"),
+                    !blacklisted ? null : TR(TD(cl("labkey-error"), "blacklisted"), TD(A(at(Attribute.href,"admin-caches.view"),"clear"), " blacklist cache to reset")),
+                    TR(TH("host"), TD(host)),
+                    TR(TH("userAgent", TD(userAgent))),
+                    TR(TH("user"), TD(user)),
+                    TR(TH("time"), TD(DateUtil.toISO(lastRequestTime))),
+                    TR(TH("url"), TD(lastURL))
+            ).appendTo(sb);
+            return HtmlString.unsafe(sb.toString());
         }
     }
 
