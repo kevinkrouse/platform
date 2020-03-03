@@ -29,7 +29,7 @@ configurations from the platform repository:
         Note that after your first successful build of this module after adding this,
         a new `package-lock.json` file will be generated. You will want to add that file to your git repo
         and check it in as well. Note that in this file the `LK_MODULE` value will need to be set 
-        to match your module name and the `npm clean` command might need to be adjusted if your module
+        to match your module name and the `yarn clean` command might need to be adjusted if your module
         already has file in the `resources/views` directory.
     1. `.npmrc` - Defines the Artifactory registry path for the `@labkey` scope, if you 
         plan to use any of the Labkey npm packages for your page.
@@ -40,8 +40,8 @@ configurations from the platform repository:
         for the steps in the "Adding a new entryPoint" section of this document.
 1. Create the `<module>/src/client` directories and add a file named `entryPoints.js`, more on this in
     the "Adding a new entryPoint" section of this doc.
-1. Update your module's `build.gradle` file to add a line so that it's `npmInstall` command is dependent
-    on the `npmInstall` command finishing at the platform repository level. See example at 
+1. Update your module's `build.gradle` file to add a line so that it's `yarn` command is dependent
+    on the `yarn` command finishing at the platform repository level. See example at 
     `platform/experiment/build.gradle`. 
 1. Update the `platform/.gitignore` file so that it knows to ignore your module's `node_modules` directory
     and generated JS/CSS artifacts.
@@ -55,13 +55,13 @@ You can install the necessary npm packages and build the module by running the s
 gradlew tasks, `./gradlew deployApp` or `./gradlew :server:modules:platform:<module>>:deployModule`. 
 You can also run one of the following npm commands directly from the module's main directory:
 ```
-npm run setup
-npm run build
+yarn run setup
+yarn run build
 ```
 
 To clean the generated client-side artifacts from the module:
 ```
-npm run clean
+yarn run clean
 ```
 
 ### Adding a new entryPoint
@@ -87,18 +87,18 @@ To add a new `entryPoint` for a LabKey React page:
 To allow updates made to TypeScript, JavaScript, CSS, and SCSS files to take effect on your LabKey
 React page without having to manually build the changes each time, you can develop with Hot Module 
 Reloading enabled via a webpack development server. You can run the HMR server from the 
-`trunk/server/modules/platform/<module>` directory via the `npm start` command. Once started, you 
+`trunk/server/modules/platform/<module>` directory via the `yarn start` command. Once started, you 
 will need to access your page via an alternate action name to view the changes. The server action 
 is `module-entryPointDev.view` instead of the normal `module-entryPoint.view`.
 
 Note that since modules in the platform repository share configurations for the webpack development
 server, they are set to us the same port number for the HMR environment. This means that you can only
-have one module's HMR mode enabled at a time. If you try to run `npm start` for a second module, you
+have one module's HMR mode enabled at a time. If you try to run `yarn start` for a second module, you
 will get an error message saying that the `address is already in use`.
  
 ```
 cd trunk/server/modules/platform/<module>
-npm start
+yarn start
 ```  
 
 [React]: https://reactjs.org
