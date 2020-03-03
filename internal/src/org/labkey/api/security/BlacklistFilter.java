@@ -230,9 +230,9 @@ public class BlacklistFilter
         keys.addAll(blacklist.getKeys());
         for (String key : keys)
         {
-            Suspicious s = blacklist.get(key);
+            Suspicious s = suspiciousMap.get(key);
             if (null == s)
-                s = suspiciousMap.get(key);
+                s = blacklist.get(key);
             if (null == s)
                 continue;
             Suspicious copy = s.clone();
@@ -279,7 +279,7 @@ public class BlacklistFilter
             if (u != null && !u.isGuest())
                  this.user = u.getEmail();
             this.lastRequestTime = HeartBeat.currentTimeMillis();
-            this.lastURL = req.getRequestURI() + "?" + req.getQueryString();
+            this.lastURL = req.getRequestURI() + (null == req.getQueryString() ? "" : "?" + req.getQueryString());
             return count;
         }
 
